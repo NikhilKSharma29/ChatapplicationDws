@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { FiHome, FiMessageSquare, FiSettings, FiMenu, FiX, FiSun, FiMoon } from 'react-icons/fi';
 
-export default function ChatLayout({ children }) {
+export default function ChatLayout({ children, onNewChat }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -130,7 +130,15 @@ export default function ChatLayout({ children }) {
                 </h1>
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                {onNewChat && (
+                  <button
+                    onClick={onNewChat}
+                    className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                  >
+                    New Chat
+                  </button>
+                )}
                 <div className="relative">
                   <button
                     type="button"

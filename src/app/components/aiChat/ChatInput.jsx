@@ -68,13 +68,16 @@ export default function ChatInput({ onSendMessage, isSending = false }) {
           <textarea
             ref={textareaRef}
             rows={1}
-            placeholder="Type your message..."
+            placeholder={isSending ? "AI is responding..." : "Type your message..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
+            onFocus={() => !isSending && setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className="w-full px-2 py-3 bg-transparent border-0 focus:ring-0 resize-none overflow-hidden max-h-32 scrollbar-hide"
+            disabled={isSending}
+            className={`w-full px-2 py-3 bg-transparent border-0 focus:ring-0 resize-none overflow-hidden max-h-32 scrollbar-hide ${
+              isSending ? "cursor-not-allowed opacity-70" : ""
+            }`}
             style={{ minHeight: "44px" }}
           />
         </div>
