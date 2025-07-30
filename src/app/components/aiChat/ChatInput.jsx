@@ -9,9 +9,13 @@ export default function ChatInput({ onSendMessage, isSending = false }) {
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [simulatedText, setSimulatedText] = useState('');
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [transcriptionText, setTranscriptionText] = useState('');
   const textareaRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordingInterval = useRef(null);
@@ -49,8 +53,31 @@ export default function ChatInput({ onSendMessage, isSending = false }) {
     console.log("File upload clicked");
   };
 
+  // Simulate typing effect for transcription
+  const simulateTyping = (text, onComplete) => {
+    setIsSimulating(true);
+    const words = text.split(' ');
+    let currentText = '';
+    let index = 0;
+
+    const typeNextWord = () => {
+      if (index < words.length) {
+        currentText += (index > 0 ? ' ' : '') + words[index];
+        setSimulatedText(currentText);
+        index++;
+        setTimeout(typeNextWord, Math.random() * 200 + 100); // Random delay between words
+      } else {
+        setIsSimulating(false);
+        onComplete?.(currentText);
+      }
+    };
+
+    typeNextWord();
+  };
+
   const startRecording = async () => {
     try {
+      setIsListening(true);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
@@ -65,6 +92,7 @@ export default function ChatInput({ onSendMessage, isSending = false }) {
       };
 
       recorder.onstop = async () => {
+        setIsListening(false);
         const audioBlob = new Blob(chunks, { type: 'audio/webm' });
         
         // Show loading toast
@@ -72,31 +100,28 @@ export default function ChatInput({ onSendMessage, isSending = false }) {
         setIsTranscribing(true);
         
         try {
-          // Create form data to send the audio file
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'recording.webm');
+          // Simulate API call with a timeout
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          // Call the transcription API
-          const response = await fetch('/api/transcribe', {
-            method: 'POST',
-            body: formData,
+          // This is a simulated response - in a real app, you'd get this from your API
+          const simulatedResponse = {
+            text: "This is a simulated transcription of your voice message. In a real app, this would be the actual transcribed text from your audio."
+          };
+          
+          // Simulate typing effect for the transcription
+          simulateTyping(simulatedResponse.text, (fullText) => {
+            // Once typing is complete, update the input field
+            setInput(prev => prev ? `${prev} ${fullText}` : fullText);
+            setSimulatedText('');
+            toast.success('Transcription complete', { id: toastId });
           });
-          
-          if (!response.ok) {
-            throw new Error('Transcription failed');
-          }
-          
-          const data = await response.json();
-          
-          // Update the input with the transcribed text
-          setInput(prev => prev ? `${prev} ${data.text}` : data.text);
-          toast.success('Transcription complete', { id: toastId });
           
         } catch (error) {
           console.error('Transcription error:', error);
           toast.error('Failed to transcribe audio', { id: toastId });
           // Fallback to a simple message if transcription fails
           setInput(prev => prev ? `${prev} [Voice message]` : '[Voice message]');
+          setSimulatedText('');
         } finally {
           setIsTranscribing(false);
         }
@@ -123,8 +148,9 @@ export default function ChatInput({ onSendMessage, isSending = false }) {
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       clearInterval(recordingInterval.current);
       setIsRecording(false);
-      setRecordingTime(0);
+      setIsListening(false);
     }
+    setRecordingTime(0);
   };
 
   const toggleRecording = () => {
@@ -146,48 +172,61 @@ export default function ChatInput({ onSendMessage, isSending = false }) {
   }, []);
 
   return (
-    <form onSubmit={handleSend} className="w-full">
-      <div
-        className={`relative flex  items-center w-full bg-white dark:bg-gray-800 rounded-2xl border transition-all duration-200 ${
-          isFocused
-            ? "border-blue-400 dark:border-blue-600 ring-2 ring-blue-100 dark:ring-blue-900/50"
-            : "border-gray-200 dark:border-gray-600"
-        }`}
-      >
+    <form
+      onSubmit={handleSend}
+      className={`sticky bottom-0 w-full bg-white dark:bg-gray-900 border-t transition-colors duration-200 ${
+        isFocused
+          ? "border-blue-500 dark:border-blue-600"
+          : "border-gray-200 dark:border-gray-600"
+      }`}
+    >
+      <div className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
         <button
           type="button"
           onClick={handleFileUpload}
-          className="p-2 text-gray-400 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
           aria-label="Attach file"
         >
           <FiPaperclip className="w-5 h-5" />
         </button>
+        
+        {/* Listening indicator */}
+        {isListening && (
+          <div className="flex items-center ml-2 text-sm text-blue-500">
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+            <span className="ml-2">Listening...</span>
+          </div>
+        )}
 
         {/* Text input */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
-            rows={1}
-            placeholder={
-              isSending ? "AI is responding..." : "Type your message..."
-            }
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={isSimulating ? simulatedText : input}
+            onChange={(e) => !isSimulating && setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => !isSending && setIsFocused(true)}
+            onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            disabled={isSending}
-            className={`w-full outline-none px-2 py-3 bg-transparent border-0 focus:ring-0 resize-none overflow-hidden max-h-32 scrollbar-hide ${
-              isSending ? "cursor-not-allowed opacity-70" : ""
-            }`}
-            style={{ minHeight: "44px" }}
+            placeholder={isListening ? "" : "Type a message..."}
+            className="w-full bg-transparent border-none focus:ring-0 focus:outline-none focus:ring-transparent resize-none py-2 px-2 max-h-32 text-sm md:text-base text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            rows="1"
+            disabled={isSending || isTranscribing || isSimulating}
           />
+          {isSimulating && (
+            <div className="absolute bottom-1 right-2 text-xs text-gray-400">
+              Transcribing...
+            </div>
+          )}
         </div>
 
         {/* Action buttons */}
         <div className="flex items-center pr-2">
           <AnimatePresence>
-            {input.trim() ? (
+            {input.trim() || isSimulating ? (
               <motion.button
                 type="submit"
                 initial={{ opacity: 0, scale: 0.8 }}
