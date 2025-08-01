@@ -1,0 +1,10 @@
+{
+  "messages": [],
+  "users": [
+    {
+      "id": 1,
+      "name": "AI Assistant",
+      "avatar": "/ai-avatar.png"
+    }
+  ]
+}

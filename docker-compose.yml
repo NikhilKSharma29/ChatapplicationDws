@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    container_name: chat-app
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - mock-server
+    networks:
+      - chat-network
+
+  mock-server:
+    image: node:20-alpine
+    container_name: mock-server
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./mock-server:/data
+    working_dir: /data
+    command: sh -c "npm install -g json-server && json-server --watch db.json --port 3000 --host 0.0.0.0"
+    networks:
+      - chat-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  chat-network:
+    driver: bridge
